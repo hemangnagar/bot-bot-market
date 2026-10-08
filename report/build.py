@@ -233,7 +233,10 @@ def section_failures(all_rows: list[dict[str, Any]]) -> tuple[str, list[list[Any
         ex = next(r for r in fails if normalise_reason(r["failure_reason"]) == reason)
         notes = (ex["detail"].get("notes") or ex["failure_reason"] or "").replace("\n", " ").replace("|", "/")[:220]
         rows.append([i, reason, n, pct(n / len(fails)) if fails else "0%", f"{ex['txn_id']}, {ex['policy']}, {ex['task_type']}", notes])
-    text = f"{len(fails)} failed transactions out of {len(all_rows)} across the campaign.\n\n" + table(headers, rows)
+    altered = sum(1 for r in all_rows if int(r.get("result_altered") or 0))
+    text = (f"{len(fails)} failed transactions out of {len(all_rows)} across the campaign. In {altered} transactions the agent's reported output "
+            f"differed from what the providers returned (it patched a leaky redaction itself); those are judged on the provider output.\n\n"
+            + table(headers, rows))
     return text, [headers] + rows
 
 
@@ -288,7 +291,7 @@ def section_deployment(base: list[dict[str, Any]], all_rows: list[dict[str, Any]
         f"**Cheaper model for discovery.** The quote phase is {turns:.1f} model turns of which the first is always a registry search. "
         f"Running search-and-shortlist on Haiku 5.5 and only the plan/quote turn on Sonnet 5.5 would cut roughly a third of broker cost "
         f"(Haiku output tokens cost 1/20th of Sonnet's); the buyers in this run show Haiku handles the search step reliably.",
-        f"**Output-token diet.** Output tokens are {out_share:.0%} of the broker's bill; cache reads are already {cache_tok / max(cache_tok + in_tok, 1):.0%} "
+        f"**Output-token diet.** Output tokens are {out_share:.0%} of the broker's bill; cache reads are already {cache_tok / max(cache_tok + in_tok, 1):.1%} "
         f"of its input. A terser rationale and a structured-output quote (no prose) would remove an estimated 20 to 30% of output tokens.",
         "**Lower effort by default.** See the effort sweep above: the low-effort broker's cost and success rate bound what a cheaper default buys.",
         "**Skip the quote round-trip for small tickets.** For plans under a fee floor's worth of provider cost, execute first and settle after; "
