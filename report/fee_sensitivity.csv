@@ -1,5 +1,8 @@
 fee %,source,brokered,quotes accepted,success,mean fee,mean broker LLM,net / brokered task,net / accepted deal,mean price to buyer
+5,measured run,300,100%,94%,$0.0052,$0.0103,$-0.0058,$-0.0057,$0.0666
+10,measured run,300,100%,94%,$0.0076,$0.0103,$-0.0036,$-0.0032,$0.0690
 15,measured run,300,99%,93%,$0.0104,$0.0103,$-0.0012,$-0.0004,$0.0714
+25,measured run,300,99%,93%,$0.0159,$0.0103,$0.0036,$0.0051,$0.0768
 5,re-priced base run,300,as base,as base,$0.0052,$0.0103,$-0.0058,$-0.0056,$0.0662
 10,re-priced base run,300,as base,as base,$0.0076,$0.0103,$-0.0037,$-0.0032,$0.0686
 15,re-priced base run,300,as base,as base,$0.0104,$0.0103,$-0.0012,$-0.0004,$0.0714

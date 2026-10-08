@@ -1,4 +1,4 @@
 actor,model,calls,input tokens,output tokens,cache-read tokens,USD
-broker,claude-sonnet-5-5,1020,2040,170661,1724846,$3.4440
-buyer,claude-haiku-5-5,2730,5460,673526,5053896,$0.5884
-provider:decision_gate,claude-haiku-5-5,476,362491,470874,0,$0.2717
+broker,claude-sonnet-5-5,4663,9326,784126,7936973,$15.8906
+buyer,claude-haiku-5-5,7412,14824,1849107,13221248,$1.5778
+provider:decision_gate,claude-haiku-5-5,1443,1097349,1419535,0,$0.8195

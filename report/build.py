@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from runner.meter import SpendMeter
+from runner.pricing import Pricing
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs"
@@ -268,9 +269,29 @@ def section_spend(run_dirs: list[Path], cap: float) -> tuple[str, list[list[Any]
     return "\n".join(text), [headers] + rows
 
 
-def section_deployment(base: list[dict[str, Any]], all_rows: list[dict[str, Any]]) -> str:
+def broker_token_split(run_dir: Path) -> dict[str, float]:
+    """Share of the broker's bill by token type, priced with pricing.yaml rates for its model."""
+    db = run_dir / "meter.sqlite"
+    if not db.exists():
+        return {}
+    con = sqlite3.connect(str(db))
+    row = con.execute("SELECT model, SUM(input_tokens), SUM(output_tokens), SUM(cache_write_5m), SUM(cache_write_1h), SUM(cache_read)"
+                      " FROM llm_calls WHERE actor = 'broker' GROUP BY model ORDER BY SUM(cost_usd) DESC").fetchone()
+    con.close()
+    if not row:
+        return {}
+    model, inp, out, w5, w1, cr = row
+    rates = Pricing().rates(model)
+    parts = {"output": (out or 0) * rates["output"], "cache writes": (w5 or 0) * rates["cache_write_5m"] + (w1 or 0) * rates["cache_write_1h"],
+             "cache reads": (cr or 0) * rates["cache_read"], "uncached input": (inp or 0) * rates["input"]}
+    total = sum(parts.values()) or 1.0
+    return {k: v / total for k, v in parts.items()}
+
+
+def section_deployment(base: list[dict[str, Any]], all_rows: list[dict[str, Any]], base_dir: Path) -> str:
     via = [r for r in base if r["policy"] == "via_broker"]
     broker_cost = mean([r["llm_cost_broker"] for r in via])
+    split = broker_token_split(base_dir)
     # repeat-task share: same (task_type, plan providers) pair seen before in the run
     seen, repeats = set(), 0
     for r in sorted(via, key=lambda r: r["ts"]):
@@ -278,26 +299,25 @@ def section_deployment(base: list[dict[str, Any]], all_rows: list[dict[str, Any]
         repeats += key in seen
         seen.add(key)
     repeat_share = repeats / len(via) if via else 0
-    calls = [c for r in via for c in r["detail"].get("llm_calls", []) if c.get("actor") == "broker"]
-    out_tok = sum(c.get("output_tokens") or 0 for c in calls)
-    cache_tok = sum(c.get("cache_read") or 0 for c in calls)
-    in_tok = sum(c.get("input_tokens") or 0 for c in calls)
-    out_share = (out_tok * 10.0) / max(out_tok * 10.0 + cache_tok * 0.10 + in_tok * 2.0, 1e-9)  # Sonnet 5.5 rates
     turns = mean([float(r["broker_turns"] or 0) for r in via])
+    out_share, write_share = split.get("output", 0.0), split.get("cache writes", 0.0)
     items = [
         f"**Deterministic routing for repeat tasks.** {repeat_share:.0%} of brokered tasks in the base run had the same (task type, plan) as an "
-        f"earlier one. Serving those from a cached plan with no model call removes about {repeat_share:.0%} of broker reasoning cost "
-        f"({usd(broker_cost * repeat_share)} per brokered task on average) and most of the quote latency.",
+        f"earlier one. Serving repeats from a cached plan with no model call would remove up to that share of broker reasoning cost "
+        f"(up to {usd(broker_cost * repeat_share)} per brokered task); a stricter match key (task type plus payload shape) would cover less, "
+        f"but still most of this bench's traffic, and most of the quote latency goes with it.",
         f"**Cheaper model for discovery.** The quote phase is {turns:.1f} model turns of which the first is always a registry search. "
         f"Running search-and-shortlist on Haiku 5.5 and only the plan/quote turn on Sonnet 5.5 would cut roughly a third of broker cost "
         f"(Haiku output tokens cost 1/20th of Sonnet's); the buyers in this run show Haiku handles the search step reliably.",
-        f"**Output-token diet.** Output tokens are {out_share:.0%} of the broker's bill; cache reads are already {cache_tok / max(cache_tok + in_tok, 1):.1%} "
-        f"of its input. A terser rationale and a structured-output quote (no prose) would remove an estimated 20 to 30% of output tokens.",
+        f"**Output-token diet.** Output tokens are {out_share:.0%} of the broker's bill (cache writes {write_share:.0%}, cache reads "
+        f"{split.get('cache reads', 0.0):.0%}, uncached input {split.get('uncached input', 0.0):.0%}). A terser rationale and a structured-output "
+        f"quote (no prose) would remove an estimated 20 to 30% of output tokens, about {out_share * 0.25:.0%} of the bill.",
         "**Lower effort by default.** See the effort sweep above: the low-effort broker's cost and success rate bound what a cheaper default buys.",
         "**Skip the quote round-trip for small tickets.** For plans under a fee floor's worth of provider cost, execute first and settle after; "
         "the buyer-side accept/decline turn (two Haiku turns, about $0.0003) and the broker's quote wait disappear.",
-        "**Amortise the agent spawn.** Each quote spawns a fresh CLI process and re-writes the system-prompt cache (about 1,400 tokens). "
-        "A long-lived broker session that handles many quotes keeps the cache warm and removes the per-spawn cache write.",
+        f"**Amortise the agent spawn.** Each quote spawns a fresh CLI process and re-writes the system-prompt cache (about 1,400 tokens), which is "
+        f"{write_share:.0%} of the broker's bill. A long-lived broker session that handles many quotes keeps the cache warm and converts those "
+        f"writes into reads at a 25th of the price.",
         f"**Price the fee to cover reasoning.** At the measured {usd(broker_cost)} per brokered task the floor fee needs to be at least that; "
         f"the fee-sensitivity table shows where the percentage fee alone breaks even.",
     ]
@@ -359,7 +379,7 @@ def build(campaign: str | None = None, cap: float = 80.0) -> Path:
         "Agent SDK estimate vs metered cost in the base run: " + "; ".join(
             f"{a}: meter {usd(m)} vs SDK {usd(s)} ({s / m:.1f}x)" for a, (m, s) in cmp.items()) +
         ". The CLI prices claude-haiku-5-5 as an unrecognised model, so its estimate is not usable for Haiku; the meter is authoritative.", "",
-        "## 6. What a real deployment would change", "", section_deployment(base, all_rows), "",
+        "## 6. What a real deployment would change", "", section_deployment(base, all_rows, runs["base"]), "",
     ]
     OUT_MD.write_text("\n".join(md))
     write_csv(OUT_DIR / "pnl_by_task_type.csv", pnl_csv[0], pnl_csv[1:])

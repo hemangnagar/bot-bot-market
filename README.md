@@ -4,7 +4,9 @@ An agent-to-agent commerce prototype. A **broker bot** (Sonnet-class) finds, quo
 services for **buyer bots** (Haiku-class). The deliverable is a unit-economics report: does the broker
 capture more in fees than it spends on its own reasoning?
 
-Plan and verified facts: [PLAN.md](PLAN.md). Report (phase 2): `report/economics.md`.
+Plan and verified facts: [PLAN.md](PLAN.md). **Results: [report/economics.md](report/economics.md)** (300 scenarios x both policies
+plus fee and effort sweeps, $18.29 of API spend). Headline: at a 15% fee the broker's margin is about zero (-$0.0004 per accepted
+deal); it turns positive at 25%, and direct buyers match the broker's success rate at a lower total cost on every task type.
 
 ## Quick start
 
