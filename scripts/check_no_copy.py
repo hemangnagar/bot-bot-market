@@ -31,7 +31,7 @@ def upstream_files() -> list[Path]:
     files: list[Path] = []
     up = ROOT / ".upstream"
     if up.exists():
-        files += [p for p in up.rglob("*") if p.suffix in EXTS and ".git" not in p.parts and "node_modules" not in p.parts]
+        files += [p for p in up.rglob("*") if p.suffix in EXTS and not ({".git", "node_modules", ".venv"} & set(p.parts))]
     for mod in ("edshield", "decision_gate"):
         spec = importlib.util.find_spec(mod)
         if spec and spec.origin:
