@@ -156,7 +156,7 @@ class Broker:
         return q
 
     # -- execute phase (deterministic) -------------------------------------
-    def execute(self, quote: Quote, task: dict[str, Any]) -> Execution:
+    def execute(self, quote: Quote, task: dict[str, Any], txn: str = "") -> Execution:
         ex = Execution(ok=True)
         prev: dict[str, Any] | None = None
         merged: dict[str, Any] = {}
@@ -164,7 +164,7 @@ class Broker:
             name = step["provider"]
             try:
                 payload = substitute(step.get("payload") or {}, task["payload"], prev)
-                res = self.wallet.invoke(name, payload, memo=f"broker:{quote.quote_id}")
+                res = self.wallet.invoke(name, payload, memo=f"broker:{quote.quote_id}", txn=txn)
             except (KeyError, ProviderError) as exc:
                 ex.ok, ex.error = False, f"{name}: {exc}"
                 ex.steps.append({"provider": name, "ok": False, "error": str(exc)})

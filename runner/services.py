@@ -17,6 +17,8 @@ from registry.app import build_app, load_cards
 from settlement.sim import SimLedger
 
 ROOT = Path(__file__).resolve().parents[1]
+# Providers that must run under an upstream repo's own interpreter (see scripts/setup_upstream.sh).
+DEFAULT_PROVIDER_PYTHONS = {"grocery": str(ROOT / ".upstream" / "grocery_optimizer" / ".venv" / "bin" / "python")}
 
 
 def free_port() -> int:
@@ -98,16 +100,22 @@ class RegistryServer:
 class Bench:
     """Starts providers + registry against one ledger; registers live endpoints."""
 
-    def __init__(self, ledger: SimLedger, provider_names: list[str] | None = None, provider_pythons: dict[str, str] | None = None):
+    def __init__(self, ledger: SimLedger, provider_names: list[str] | None = None, provider_pythons: dict[str, str] | None = None,
+                 provider_env: dict[str, str] | None = None):
         self.ledger = ledger
         self.cards = load_cards(provider_names)
         self.providers: dict[str, ProviderProcess] = {}
-        self.provider_pythons = provider_pythons or {}
+        self.provider_pythons = dict(DEFAULT_PROVIDER_PYTHONS)
+        self.provider_pythons.update(provider_pythons or {})
+        self.provider_env = provider_env or {}
         self.registry: RegistryServer | None = None
 
     def start(self) -> "Bench":
         for name in self.cards:
-            p = ProviderProcess(name, python=self.provider_pythons.get(name)).start()
+            python = self.provider_pythons.get(name)
+            if python and not Path(python).exists():
+                raise RuntimeError(f"provider {name} needs {python}; run `make setup` (scripts/setup_upstream.sh)")
+            p = ProviderProcess(name, python=python, env=self.provider_env).start()
             self.providers[name] = p
             self.cards[name] = dict(self.cards[name], endpoint=p.endpoint)
         self.registry = RegistryServer(self.ledger, self.cards).start()

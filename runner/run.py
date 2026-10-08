@@ -28,6 +28,7 @@ from .services import Bench
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs"
 PHASE1_PROVIDERS = ["stub_scrub_cheap", "stub_adjudicate_fast", "edshield"]
+ALL_PROVIDERS = PHASE1_PROVIDERS + ["decision_gate", "grocery", "model_evidence"]
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -40,7 +41,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--concurrency", type=int, default=3)
     ap.add_argument("--seed", type=int, default=None)
-    ap.add_argument("--providers", default=",".join(PHASE1_PROVIDERS))
+    ap.add_argument("--providers", default=",".join(ALL_PROVIDERS), help=f"phase 1 set: {','.join(PHASE1_PROVIDERS)}")
     ap.add_argument("--buyer-model", default="claude-haiku-5-5")
     ap.add_argument("--broker-model", default="claude-sonnet-5-5")
     ap.add_argument("--buyer-effort", default="low")
@@ -63,7 +64,9 @@ class Runner:
         self.meter = SpendMeter(self.dir / "meter.sqlite", cap_usd=args.cap)
         self.meter_server = MeterServer(self.meter).start()
         self.ledger = SimLedger(self.dir / "ledger.sqlite")
-        self.bench = Bench(self.ledger, provider_names=[p for p in args.providers.split(",") if p]).start()
+        provider_env = {"ANTHROPIC_API_KEY": self.api_key, "ANTHROPIC_BASE_URL": self.meter_server.url,
+                        "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost"}
+        self.bench = Bench(self.ledger, provider_names=[p for p in args.providers.split(",") if p], provider_env=provider_env).start()
         self.registry = RegistryClient(self.bench.registry_url)
         self.log = TransactionLog(self.dir / "bench.sqlite")
         self.ledger.fund("wallet:broker", 100.0)
@@ -81,7 +84,7 @@ class Runner:
 
     async def one(self, task: dict[str, Any], policy: str) -> dict[str, Any]:
         txn = f"{self.run_id}-{task['id']}-{policy[0]}"
-        wallet = WalletClient(self.registry, self.ledger, f"wallet:buyer:{txn}")
+        wallet = WalletClient(self.registry, self.ledger, f"wallet:buyer:{txn}", txn=txn)
         self.ledger.fund(wallet.wallet, task["budget_usd"])
         t0 = time.time()
         if policy == "direct":

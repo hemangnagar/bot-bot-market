@@ -1,0 +1,13 @@
+{
+  "name": "model_evidence",
+  "description": "Binary classifier evaluation scoring (model-evidence). Give predictions and ground-truth labels (lists of 0/1) and optional thresholds; returns accuracy, precision, recall, false-positive rate with 95% intervals, the confusion matrix, and a pass/fail/insufficient performance verdict against the thresholds.",
+  "capability": "eval_scoring",
+  "tags": ["eval", "evaluate", "evaluation", "metrics", "accuracy", "precision", "recall", "classifier", "score", "scoring", "predictions", "labels"],
+  "input_schema": {"type": "object", "required": ["predictions", "labels"], "properties": {"predictions": {"type": "array", "items": {"type": "integer"}}, "labels": {"type": "array", "items": {"type": "integer"}}, "thresholds": {"type": "object"}}},
+  "output_schema": {"type": "object", "properties": {"accuracy": {"type": "number"}, "precision": {"type": "number"}, "recall": {"type": "number"}, "fpr": {"type": "number"}, "performance": {"type": "string"}, "confusion": {"type": "object"}}},
+  "price_usd": 0.05,
+  "latency_p50_ms": 150,
+  "quality_note": "deterministic Wilson intervals; single run so stability/reproducibility report insufficient",
+  "wallet": "wallet:model_evidence",
+  "endpoint": null
+}

@@ -1,0 +1,13 @@
+{
+  "name": "decision_gate",
+  "description": "Adversarial adjudication (decision_gate). Takes two competing claims; a Builder model states what claim_a rests on, an Adversary model raises rated challenges informed by claim_b, and a fixed rule decides ACT, WAIT or ABANDON. Returns the verdict, matched rule, rationale and the full list of challenges with materiality and what would resolve each.",
+  "capability": "adjudicate",
+  "tags": ["adjudicate", "verdict", "decision", "claims", "arbitrate", "judge", "compare", "challenges", "review", "reasoned"],
+  "input_schema": {"type": "object", "required": ["claim_a", "claim_b"], "properties": {"claim_a": {"type": "string"}, "claim_b": {"type": "string"}, "context": {"type": "string"}, "max_rounds": {"type": "integer", "minimum": 1, "maximum": 2}}},
+  "output_schema": {"type": "object", "properties": {"verdict": {"type": "string", "enum": ["ACT", "WAIT", "ABANDON"]}, "rationale": {"type": "string"}, "matched_rule": {"type": "string"}, "challenges": {"type": "array"}, "triggering_challenges": {"type": "array"}}},
+  "price_usd": 0.10,
+  "latency_p50_ms": 15000,
+  "quality_note": "model-reviewed with explicit challenges; slow",
+  "wallet": "wallet:decision_gate",
+  "endpoint": null
+}

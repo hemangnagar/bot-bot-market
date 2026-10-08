@@ -1,0 +1,13 @@
+{
+  "name": "grocery",
+  "description": "Grocery price lookup and basket optimizer (grocery_optimizer). Give a list of grocery items (and optionally which stores to consider: Aldi, Harris Teeter, Trader Joe's, Whole Foods) and get the cheapest single store that covers the whole list, with per-store totals and missing items. Prices are this week's demo catalogue.",
+  "capability": "price_lookup",
+  "tags": ["grocery", "price", "lookup", "basket", "cheapest", "store", "shopping", "compare", "optimize"],
+  "input_schema": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"type": "string"}}, "stores": {"type": "array", "items": {"type": "string"}}}},
+  "output_schema": {"type": "object", "properties": {"winner": {"type": "object"}, "stores": {"type": "array"}, "matched_items": {"type": "array"}, "unmatched_items": {"type": "array"}}},
+  "price_usd": 0.01,
+  "latency_p50_ms": 50,
+  "quality_note": "deterministic; demo catalogue of ~26 items across 4 stores",
+  "wallet": "wallet:grocery",
+  "endpoint": null
+}

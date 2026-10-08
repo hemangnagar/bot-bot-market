@@ -59,28 +59,29 @@ class RegistryClient:
         body = r.json()
         return PaymentRequirement.from_wire(body["accepts"][0]), body
 
-    def invoke_paid(self, name: str, payload: dict[str, Any], signature_wire: dict[str, Any]) -> httpx.Response:
-        return self._c.post(f"/invoke/{name}", json=payload, headers={HDR_SIGNATURE: b64(signature_wire)})
+    def invoke_paid(self, name: str, payload: dict[str, Any], signature_wire: dict[str, Any], txn: str = "") -> httpx.Response:
+        return self._c.post(f"/invoke/{name}", json=payload, headers={HDR_SIGNATURE: b64(signature_wire), "X-Bench-Txn": txn})
 
 
 class WalletClient:
     """A payer: a wallet id plus the ability to sign SimLedger payments."""
 
-    def __init__(self, registry: RegistryClient, ledger: SimLedger, wallet: str):
+    def __init__(self, registry: RegistryClient, ledger: SimLedger, wallet: str, txn: str = ""):
         self.registry, self.ledger, self.wallet = registry, ledger, wallet
+        self.txn = txn  # default transaction id for attribution; the broker passes one per call
         self.spent_usd = 0.0
         self.calls: list[InvokeResult] = []
 
     def balance(self) -> float:
         return self.ledger.balance(self.wallet)
 
-    def invoke(self, name: str, payload: dict[str, Any], memo: str = "") -> InvokeResult:
+    def invoke(self, name: str, payload: dict[str, Any], memo: str = "", txn: str | None = None) -> InvokeResult:
         t0 = time.time()
         req, _ = self.registry.quote_402(name, payload)
         if self.balance() + 1e-9 < req.amount_usd:
             raise ProviderError(name, 402, f"wallet {self.wallet} has {self.balance():.4f} USD, price is {req.amount_usd:.4f} USD")
         header = self.ledger.sign(self.wallet, req, memo=memo)
-        r = self.registry.invoke_paid(name, payload, header.to_wire())
+        r = self.registry.invoke_paid(name, payload, header.to_wire(), txn=txn if txn is not None else self.txn)
         if r.status_code != 200:
             try:
                 detail = r.json().get("error") or r.json().get("detail") or r.text

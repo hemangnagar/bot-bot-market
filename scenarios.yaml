@@ -1,12 +1,15 @@
 # Scenario generator config. `make smoke` / `make run` draw N tasks from `mix` with `seed`.
 seed: 7
 budget_usd_per_task: 0.25
-mix:                       # share of each task type in a run
-  scrub_basic: 0.20        # single service; both scrubbers fit; cheapest is fine
-  scrub_strict: 0.20       # single service; two providers match the keywords but only the better one passes
-  adjudicate: 0.20         # single service: two claims in, verdict out
-  chain: 0.25              # two services in sequence: scrub, then adjudicate claims about the scrubbed note
-  impossible: 0.15         # no provider fits; the broker must decline cleanly, the buyer must not pay
+mix:                       # share of each task type in a run (phase 2 mix; sums to 1)
+  scrub_basic: 0.12        # single service; both scrubbers fit; cheapest is fine
+  scrub_strict: 0.12       # single service; both scrubbers match the keywords, only edshield passes
+  adjudicate: 0.12         # single service; cheap stub or decision_gate both pass
+  adjudicate_reasoned: 0.12 # single service; only decision_gate's rated challenges pass
+  chain: 0.16              # two services in sequence: scrub, then adjudicate claims about the scrubbed note
+  lookup: 0.12             # grocery_optimizer: items + stores in, cheapest basket out
+  eval: 0.12               # model-evidence: predictions + labels in, metrics out
+  impossible: 0.12         # no provider fits; the broker must decline cleanly, the buyer must not pay
 impossible_tasks:
   - "Translate the following note into French and return it as `translated_text`."
   - "Book a 30-minute meeting room for tomorrow at 10:00 and return `booking_id`."

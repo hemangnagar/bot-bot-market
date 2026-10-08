@@ -17,7 +17,7 @@ def test_stubs_and_edshield_shapes():
 def test_generate_is_deterministic_and_mixed():
     a, b = generate(20), generate(20)
     assert [t["payload"] for t in a] == [t["payload"] for t in b]
-    assert {t["task_type"] for t in a} == {"scrub_basic", "scrub_strict", "adjudicate", "chain", "impossible"}
+    assert {t["task_type"] for t in a} >= {"scrub_basic", "scrub_strict", "adjudicate", "chain", "impossible", "lookup", "eval"}
 
 
 def test_judge_uses_provider_output_not_agent_claim():

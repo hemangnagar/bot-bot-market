@@ -13,8 +13,10 @@ import time
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
+
+from .context import current_txn
 
 ROOT = Path(__file__).resolve().parent
 
@@ -41,14 +43,17 @@ def build_app(name: str) -> FastAPI:
         return card
 
     @app.post("/invoke")
-    def invoke(req: InvokeRequest) -> dict:
+    def invoke(req: InvokeRequest, x_bench_txn: str = Header(default="", alias="X-Bench-Txn")) -> dict:
         t0 = time.time()
+        token = current_txn.set(x_bench_txn)
         try:
             out = adapter.invoke(req.payload)
         except ValueError as exc:  # bad input -> 422 so the registry can distinguish it from a crash
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}") from exc
+        finally:
+            current_txn.reset(token)
         return {"ok": True, "provider": name, "latency_ms": int((time.time() - t0) * 1000), "output": out}
 
     return app

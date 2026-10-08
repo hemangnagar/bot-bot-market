@@ -112,7 +112,7 @@ class Buyer:
             if wallet.balance() + 1e-9 < q.total_price_usd:
                 return tool_result({"error": "insufficient funds for this quote"}, is_error=True)
             state["accepted"] = True
-            ex = broker.execute(q, task)
+            ex = broker.execute(q, task, txn=txn)
             state["execution"] = ex
             if not ex.ok:
                 return tool_result({"ok": False, "error": f"broker could not complete the plan: {ex.error}", "charged_usd": 0.0}, is_error=True)

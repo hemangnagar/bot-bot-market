@@ -108,7 +108,8 @@ def build_app(settlement: Settlement, cards: dict[str, dict[str, Any]] | None = 
         payload = await request.json()
         t0 = time.time()
         try:
-            resp = client.post(card["endpoint"].rstrip("/") + "/invoke", json={"payload": payload})
+            resp = client.post(card["endpoint"].rstrip("/") + "/invoke", json={"payload": payload},
+                               headers={"X-Bench-Txn": request.headers.get("x-bench-txn", "")})
         except httpx.HTTPError as exc:
             app.state.calls.append({"provider": name, "ok": False, "error": str(exc), "ts": t0})
             raise HTTPException(502, f"provider {name} unreachable: {exc}") from exc
