@@ -131,6 +131,10 @@ class Runner:
         tasks = generate(self.args.n, cfg, seed=self.args.seed)
         (self.dir / "tasks.json").write_text(json.dumps(tasks, indent=1))
         policies = [p for p in self.args.policies.split(",") if p]
+        done = {(r["scenario_id"], r["policy"]) for r in self.log.rows()}  # resume: skip pairs already logged in this run dir
+        if done:
+            self.rows = self.log.rows()
+            print(f"resuming {self.run_id}: {len(done)} transactions already logged", flush=True)
         sem = asyncio.Semaphore(self.args.concurrency)
 
         async def guarded(task: dict[str, Any], policy: str) -> None:
@@ -144,7 +148,7 @@ class Runner:
                 if self.meter.remaining() <= 0 and not self.stopped_reason:
                     self.stopped_reason = f"cap {self.meter.cap_usd:.2f} USD reached"
 
-        await asyncio.gather(*(guarded(t, p) for t in tasks for p in policies))
+        await asyncio.gather(*(guarded(t, p) for t in tasks for p in policies if (t["id"], p) not in done))
         self.finish()
 
     # -- summary ------------------------------------------------------------
