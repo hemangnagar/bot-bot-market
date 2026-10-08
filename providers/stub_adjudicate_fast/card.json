@@ -1,0 +1,13 @@
+{
+  "name": "stub_adjudicate_fast",
+  "description": "Fast heuristic adjudicator. Takes two competing claims and returns a verdict (ACT, WAIT or ABANDON) with a short rationale. No model reasoning; low confidence.",
+  "capability": "adjudicate",
+  "tags": ["adjudicate", "verdict", "decision", "claims", "arbitrate", "judge", "compare"],
+  "input_schema": {"type": "object", "required": ["claim_a", "claim_b"], "properties": {"claim_a": {"type": "string"}, "claim_b": {"type": "string"}, "context": {"type": "string"}}},
+  "output_schema": {"type": "object", "properties": {"verdict": {"type": "string", "enum": ["ACT", "WAIT", "ABANDON"]}, "rationale": {"type": "string"}, "matched_rule": {"type": "string"}}},
+  "price_usd": 0.03,
+  "latency_p50_ms": 5,
+  "quality_note": "heuristic; no reasoning; low confidence",
+  "wallet": "wallet:stub_adjudicate_fast",
+  "endpoint": null
+}

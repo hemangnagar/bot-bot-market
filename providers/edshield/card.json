@@ -1,0 +1,13 @@
+{
+  "name": "edshield",
+  "description": "Student-privacy PII scrubber (edshield, rules layer). Detects and redacts names introduced with a cue, emails, phones, usernames/handles, URLs, IDs, street addresses, SSNs and dates from text under a FERPA, COPPA or research policy. Returns redacted text and entity counts.",
+  "capability": "pii_scrub",
+  "tags": ["pii", "scrub", "redact", "privacy", "anonymize", "deidentify", "ferpa", "coppa", "student"],
+  "input_schema": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string"}, "policy": {"type": "string", "enum": ["ferpa", "coppa", "research"]}}},
+  "output_schema": {"type": "object", "properties": {"redacted_text": {"type": "string"}, "entity_counts": {"type": "object"}, "n_entities": {"type": "integer"}}},
+  "price_usd": 0.02,
+  "latency_p50_ms": 30,
+  "quality_note": "rule layer only (no neural model); catches handles and cued names that the cheap stub misses",
+  "wallet": "wallet:edshield",
+  "endpoint": null
+}

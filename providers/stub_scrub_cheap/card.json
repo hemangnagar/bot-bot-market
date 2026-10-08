@@ -1,0 +1,13 @@
+{
+  "name": "stub_scrub_cheap",
+  "description": "Cheap regex PII scrubber. Redacts emails, phone numbers and SSNs from text. Does not detect names, usernames or addresses.",
+  "capability": "pii_scrub",
+  "tags": ["pii", "scrub", "redact", "privacy", "anonymize", "deidentify"],
+  "input_schema": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string"}, "policy": {"type": "string"}}},
+  "output_schema": {"type": "object", "properties": {"redacted_text": {"type": "string"}, "entity_counts": {"type": "object"}, "n_entities": {"type": "integer"}}},
+  "price_usd": 0.01,
+  "latency_p50_ms": 5,
+  "quality_note": "regex only; misses names and handles",
+  "wallet": "wallet:stub_scrub_cheap",
+  "endpoint": null
+}
