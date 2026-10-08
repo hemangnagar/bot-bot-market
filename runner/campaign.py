@@ -47,7 +47,10 @@ def main(argv: list[str] | None = None) -> int:
             plan.append((f"fee{fee}", ["--policies", "via_broker", "--fee-pct", fee, "--broker-effort", "medium"]))
         plan.append(("effort-low", ["--policies", "via_broker", "--fee-pct", "15", "--broker-effort", "low"]))
 
-    manifest = {"campaign": a.campaign, "n": a.n, "runs": []}
+    manifest_path = RUNS / f"{a.campaign}.manifest.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {"campaign": a.campaign, "n": a.n, "runs": []}
+    done = {r["name"] for r in manifest["runs"] if not r.get("stopped_reason")}
+    plan = [(name, extra) for name, extra in plan if name not in done]
     for name, extra in plan:
         remaining = a.cap - total_spent_all_runs()
         run_id = f"{a.campaign}-{name}"
@@ -64,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
             runner.close()
         manifest["runs"].append({"name": name, "run_id": run_id, "args": extra, "spent_usd": spent_in(RUNS / run_id),
                                  "stopped_reason": runner.stopped_reason})
-        (RUNS / f"{a.campaign}.manifest.json").write_text(json.dumps(manifest, indent=1))
+        manifest_path.write_text(json.dumps(manifest, indent=1))
         if runner.stopped_reason:
             print(f"STOP: {runner.stopped_reason}", flush=True)
             break

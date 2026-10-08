@@ -13,12 +13,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = ROOT / ".bench" / "claude-config"
 KEY_VARS = ("BENCH_ANTHROPIC_API_KEY", "CORPUSCLE_ANTHROPIC_KEY", "ANTHROPIC_API_KEY")
+_cached_key: str | None = None
 
 
 def read_runtime_key() -> str:
+    """Read the runtime key once; later calls (after scrub_process_env) reuse it."""
+    global _cached_key
+    if _cached_key:
+        return _cached_key
     for var in KEY_VARS:
         val = os.environ.get(var)
         if val:
+            _cached_key = val
             return val
     raise RuntimeError(f"no API key found; set one of {KEY_VARS}")
 
