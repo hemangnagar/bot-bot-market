@@ -12,7 +12,8 @@ Plan and verified facts: [PLAN.md](PLAN.md). Report (phase 2): `report/economics
 make setup          # uv venv (Python 3.12) + deps + pinned upstream providers
 make test           # unit tests, no API calls
 make smoke          # phase 1: 20 scenarios x {direct, via_broker}; prints cost per transaction + projection
-make run            # phase 2: smoke, then 300 scenarios, then report/economics.md
+make run            # phase 2: smoke, then the campaign (300 x both policies, fee 5/10/25% sweeps, broker low effort), then the report
+make report         # rebuild report/economics.md and report/*.csv from runs/
 ```
 
 The runtime API key is read from `BENCH_ANTHROPIC_API_KEY`, `CORPUSCLE_ANTHROPIC_KEY` or `ANTHROPIC_API_KEY`
@@ -70,8 +71,15 @@ call). `make check-no-copy` fails if any 6-line window of this repo appears verb
 | `edshield` | PII scrub (rules layer) | $0.02 | github.com/hemangnagar/edshield, pip from git |
 | `stub_scrub_cheap` | PII scrub (regex, misses names/handles) | $0.01 | stub |
 | `stub_adjudicate_fast` | adjudication (heuristic) | $0.03 | stub |
-| `decision_gate` | adjudication (Builder/Adversary review) | $0.10 | phase 2 |
-| `grocery` | cheapest basket | $0.01 | phase 2 |
-| `model_evidence` | eval scoring | $0.05 | phase 2 |
+| `decision_gate` | adjudication (Builder/Adversary review on Haiku 5.5, metered) | $0.10 | github.com/hemangnagar/decision_gate, pip from git |
+| `grocery` | cheapest basket for an item list and store set | $0.01 | github.com/hemangnagar/grocery_optimizer, sidecar in its own venv |
+| `model_evidence` | classifier metrics and pass/fail verdict | $0.05 | github.com/hemangnagar/model-evidence, node subprocess |
 
-Prices are inputs to the experiment: edit `card.json`.
+Prices are inputs to the experiment: edit `card.json`. `scripts/setup_upstream.sh` (run by `make setup`) pins the two sidecar
+repos under `.upstream/` and seeds the grocery demo database; nothing from any upstream repo is committed here.
+
+## Scenarios
+
+`scenarios.yaml` mixes eight task types: `scrub_basic`, `scrub_strict` (only edshield passes), `adjudicate`, `adjudicate_reasoned`
+(only decision_gate's rated challenges pass), `chain` (scrub then adjudicate), `lookup` (grocery), `eval` (model-evidence) and
+`impossible`. Every task has a deterministic judge that scores what the providers returned, not what the agent reported.

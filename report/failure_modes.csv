@@ -1,0 +1,2 @@
+rank,failure mode,count,share of failures,"example (transaction, policy, task type)",what happened
+1,pii leaked (provider output),2,100%,"smoke-phase1b-S007-d, direct, scrub_strict","Used edshield ($0.02, COPPA policy). The service's output left the student name ""Sofia Patel"" unredacted, twice (once in the header, once as ""Sofia""). I manually replaced both with [STUDENT_NAME] and adjusted entity_coun"
